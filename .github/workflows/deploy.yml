@@ -120,6 +120,6 @@ jobs:
           
           # Actualizar entorno EB
           aws elasticbeanstalk update-environment \
-            --environment-name aws-test-env \
+            --environment-name Aws-test-env \
             --version-label ${{ github.sha }} \
             --region ${{ secrets.AWS_REGION }}
