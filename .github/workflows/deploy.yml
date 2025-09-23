@@ -95,10 +95,6 @@ jobs:
               {
                 "Name": "SECRET_KEY_BASE",
                 "Value": "${{ secrets.SECRET_KEY_BASE }}"
-              },
-              {
-                "Name": "DATABASE_URL",
-                "Value": "${{ secrets.DATABASE_URL }}"
               }
             ]
           }
