@@ -1,0 +1,125 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git libpq-dev libyaml-dev pkg-config
+
+      - name: Run tests
+        env:
+          RAILS_ENV: test
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/aws_test_test
+        run: |
+          # Crear base de datos de test temporal
+          sudo -u postgres createdb aws_test_test || true
+          bin/rails db:test:prepare test
+
+      - name: Build Docker image
+        run: |
+          docker build -t aws-test:${{ github.sha }} .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aws-test
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Crear repositorio ECR si no existe
+          aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }} || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }}
+          
+          # Tag y push de la imagen
+          docker tag aws-test:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag aws-test:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to Elastic Beanstalk
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: aws-test
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Crear archivo Dockerrun.aws.json para EB
+          cat > Dockerrun.aws.json << EOF
+          {
+            "AWSEBDockerrunVersion": "1",
+            "Image": {
+              "Name": "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG",
+              "Update": "true"
+            },
+            "Ports": [
+              {
+                "ContainerPort": "80"
+              }
+            ],
+            "Environment": [
+              {
+                "Name": "RAILS_ENV",
+                "Value": "production"
+              },
+              {
+                "Name": "RAILS_MASTER_KEY",
+                "Value": "${{ secrets.RAILS_MASTER_KEY }}"
+              },
+              {
+                "Name": "SECRET_KEY_BASE",
+                "Value": "${{ secrets.SECRET_KEY_BASE }}"
+              },
+              {
+                "Name": "DATABASE_URL",
+                "Value": "${{ secrets.DATABASE_URL }}"
+              }
+            ]
+          }
+          EOF
+          
+          # Crear aplicación EB si no existe
+          aws elasticbeanstalk describe-applications --application-names aws-test --region ${{ secrets.AWS_REGION }} || \
+          aws elasticbeanstalk create-application --application-name aws-test --region ${{ secrets.AWS_REGION }}
+          
+          # Crear versión de aplicación
+          aws elasticbeanstalk create-application-version \
+            --application-name aws-test \
+            --version-label ${{ github.sha }} \
+            --source-bundle S3Bucket=elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }},S3Key=aws-test-${{ github.sha }}.zip \
+            --region ${{ secrets.AWS_REGION }}
+          
+          # Subir Dockerrun.aws.json a S3
+          aws s3 cp Dockerrun.aws.json s3://elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}/aws-test-${{ github.sha }}.zip
+          
+          # Actualizar entorno EB
+          aws elasticbeanstalk update-environment \
+            --environment-name aws-test-env \
+            --version-label ${{ github.sha }} \
+            --region ${{ secrets.AWS_REGION }}
