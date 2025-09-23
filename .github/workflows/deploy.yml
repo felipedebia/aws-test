@@ -115,15 +115,15 @@ jobs:
           aws elasticbeanstalk describe-applications --application-names aws-test --region ${{ secrets.AWS_REGION }} || \
           aws elasticbeanstalk create-application --application-name aws-test --region ${{ secrets.AWS_REGION }}
           
-          # Crear versión de aplicación
+          # Subir Dockerrun.aws.json a S3 primero
+          aws s3 cp Dockerrun.aws.json s3://elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}/aws-test-${{ github.sha }}.zip
+          
+          # Crear versión de aplicación con Dockerrun.aws.json
           aws elasticbeanstalk create-application-version \
             --application-name aws-test \
             --version-label ${{ github.sha }} \
             --source-bundle S3Bucket=elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }},S3Key=aws-test-${{ github.sha }}.zip \
             --region ${{ secrets.AWS_REGION }}
-          
-          # Subir Dockerrun.aws.json a S3
-          aws s3 cp Dockerrun.aws.json s3://elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }}/aws-test-${{ github.sha }}.zip
           
           # Actualizar entorno EB
           aws elasticbeanstalk update-environment \
