@@ -44,9 +44,8 @@ jobs:
           sleep 10
           bin/rails db:test:prepare test
 
-      - name: Build Docker image
-        run: |
-          docker build -t aws-test:${{ github.sha }} .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -69,11 +68,11 @@ jobs:
           aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }} || \
           aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }}
           
-          # Tag y push de la imagen
-          docker tag aws-test:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag aws-test:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          # Build y push de la imagen para ARM64
+          docker buildx build --platform linux/arm64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            --push .
 
       - name: Deploy to Elastic Beanstalk
         env:
