@@ -71,9 +71,9 @@ jobs:
           aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }} || \
           aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }}
           
-              # Build y push de la imagen para ARM64 con cache (usando Dockerfile.hello)
+              # Build y push de la imagen para ARM64 con cache (usando Dockerfile principal)
               docker buildx build --platform linux/arm64 \
-                -f Dockerfile.hello \
+                -f Dockerfile \
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
                 --cache-from type=gha \
@@ -99,7 +99,32 @@ jobs:
                 "ContainerPort": "80"
               }
             ],
-            "Environment": []
+            "Environment": [
+              {
+                "Name": "RAILS_ENV",
+                "Value": "production"
+              },
+              {
+                "Name": "DATABASE_URL",
+                "Value": "postgres://postgres:\${POSTGRES_PASSWORD}@\${POSTGRES_HOST}:5432/\${POSTGRES_DB}"
+              },
+              {
+                "Name": "POSTGRES_HOST",
+                "Value": "awseb-e-c7jemcidr3-stack-awsebrdsdatabase-bpbd45afhlqx.c7jemcidr3.sa-east-1.rds.amazonaws.com"
+              },
+              {
+                "Name": "POSTGRES_USER",
+                "Value": "postgres"
+              },
+              {
+                "Name": "POSTGRES_PASSWORD",
+                "Value": "\${POSTGRES_PASSWORD}"
+              },
+              {
+                "Name": "POSTGRES_DB",
+                "Value": "aws_test_production"
+              }
+            ]
           }
           EOF
           
@@ -117,6 +142,14 @@ jobs:
             --source-bundle S3Bucket=elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }},S3Key=aws-test-${{ github.sha }}.zip \
             --region ${{ secrets.AWS_REGION }}
           
+          # Configurar variables de entorno en EB
+          aws elasticbeanstalk update-environment \
+            --environment-name Aws-test-env \
+            --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=RAILS_MASTER_KEY,Value=${{ secrets.RAILS_MASTER_KEY }} \
+            --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=SECRET_KEY_BASE,Value=${{ secrets.SECRET_KEY_BASE }} \
+            --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=POSTGRES_PASSWORD,Value=${{ secrets.POSTGRES_PASSWORD }} \
+            --region ${{ secrets.AWS_REGION }}
+
           # Actualizar entorno EB
           aws elasticbeanstalk update-environment \
             --environment-name Aws-test-env \
