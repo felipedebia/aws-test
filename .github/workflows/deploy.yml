@@ -141,9 +141,10 @@ jobs:
             fi
           done
 
-          # Configurar variables de entorno en EB usando solo secrets
+          # Configurar variables de entorno Y actualizar entorno EB en un solo comando
           aws elasticbeanstalk update-environment \
             --environment-name Aws-test-env \
+            --version-label ${{ github.sha }} \
             --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=RAILS_ENV,Value=production \
             --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=RAILS_MASTER_KEY,Value=${{ secrets.RAILS_MASTER_KEY }} \
             --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=SECRET_KEY_BASE,Value=${{ secrets.SECRET_KEY_BASE }} \
@@ -152,10 +153,4 @@ jobs:
             --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=POSTGRES_USER,Value=${{ secrets.POSTGRES_USER }} \
             --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=POSTGRES_PASSWORD,Value=${{ secrets.POSTGRES_PASSWORD }} \
             --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=POSTGRES_DB,Value=${{ secrets.POSTGRES_DB }} \
-            --region ${{ secrets.AWS_REGION }}
-
-          # Actualizar entorno EB
-          aws elasticbeanstalk update-environment \
-            --environment-name Aws-test-env \
-            --version-label ${{ github.sha }} \
             --region ${{ secrets.AWS_REGION }}
