@@ -78,7 +78,8 @@ jobs:
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
                 --cache-from type=gha \
                 --cache-to type=gha,mode=max \
-                --push .
+                --push . \
+                --progress=plain
 
       - name: Deploy to Elastic Beanstalk
         env:
@@ -117,6 +118,12 @@ jobs:
             --source-bundle S3Bucket=elasticbeanstalk-${{ secrets.AWS_REGION }}-${{ secrets.AWS_ACCOUNT_ID }},S3Key=aws-test-${{ github.sha }}.zip \
             --region ${{ secrets.AWS_REGION }}
           
+          # Esperar a que el entorno esté listo
+          echo "Esperando a que el entorno esté listo..."
+          aws elasticbeanstalk wait environment-updated \
+            --environment-name Aws-test-env \
+            --region ${{ secrets.AWS_REGION }}
+
           # Configurar variables de entorno en EB usando solo secrets
           aws elasticbeanstalk update-environment \
             --environment-name Aws-test-env \
