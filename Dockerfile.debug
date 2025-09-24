@@ -26,4 +26,4 @@ RUN bundle install
 EXPOSE 80
 
 # Comando para debugging
-CMD ["sh", "-c", "echo 'Starting Rails application after EB restart...' && bundle exec rails server -b 0.0.0.0 -p 80"]
+CMD ["sh", "-c", "echo 'Starting Rails application - final deployment test...' && bundle exec rails server -b 0.0.0.0 -p 80"]
