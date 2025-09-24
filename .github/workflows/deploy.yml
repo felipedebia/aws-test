@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     
     services:
       postgres:
@@ -68,7 +68,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
               # Build y push de la imagen para ARM64 con cache (usando Dockerfile principal)
-              docker buildx build --platform linux/amd64,linux/arm64/v8 \
+              docker buildx build --platform linux/arm64/v8 \
                 -f Dockerfile \
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
