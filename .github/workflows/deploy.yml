@@ -71,9 +71,9 @@ jobs:
           aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }} || \
           aws ecr create-repository --repository-name $ECR_REPOSITORY --region ${{ secrets.AWS_REGION }}
           
-              # Build y push de la imagen para ARM64 con cache (usando Dockerfile.debug)
+              # Build y push de la imagen para ARM64 con cache (usando Dockerfile.simple)
               docker buildx build --platform linux/arm64 \
-                -f Dockerfile.debug \
+                -f Dockerfile.simple \
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
                 -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
                 --cache-from type=gha \
@@ -103,6 +103,26 @@ jobs:
               {
                 "Name": "RAILS_ENV",
                 "Value": "production"
+              },
+              {
+                "Name": "DATABASE_URL",
+                "Value": "postgresql://testfelipe:testfelipe@awseb-e-c7jemcidr3-stack-awsebrdsdatabase-bpbd45afhlqx.cfkwmw2sq710.sa-east-1.rds.amazonaws.com:5432/ebdb"
+              },
+              {
+                "Name": "POSTGRES_HOST",
+                "Value": "awseb-e-c7jemcidr3-stack-awsebrdsdatabase-bpbd45afhlqx.cfkwmw2sq710.sa-east-1.rds.amazonaws.com"
+              },
+              {
+                "Name": "POSTGRES_USER",
+                "Value": "testfelipe"
+              },
+              {
+                "Name": "POSTGRES_PASSWORD",
+                "Value": "testfelipe"
+              },
+              {
+                "Name": "POSTGRES_DB",
+                "Value": "ebdb"
               }
             ]
           }
