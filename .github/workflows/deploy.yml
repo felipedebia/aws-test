@@ -99,20 +99,14 @@ jobs:
                 "ContainerPort": "80"
               }
             ],
-            "Environment": [
-              {
-                "Name": "RAILS_ENV",
-                "Value": "production"
-              },
-              {
-                "Name": "RAILS_MASTER_KEY",
-                "Value": "${{ secrets.RAILS_MASTER_KEY }}"
-              },
-              {
-                "Name": "SECRET_KEY_BASE",
-                "Value": "${{ secrets.SECRET_KEY_BASE }}"
-              }
-            ]
+            "HealthCheck": {
+              "Command": ["CMD-SHELL", "curl -f http://localhost/ || exit 1"],
+              "Interval": 30,
+              "Timeout": 5,
+              "Retries": 3,
+              "StartPeriod": 60
+            },
+            "Environment": []
           }
           EOF
           
