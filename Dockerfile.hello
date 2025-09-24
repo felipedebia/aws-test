@@ -7,4 +7,5 @@ RUN echo '<html><body><h1>Hello from Rails App!</h1><p>Container is running succ
 # Exponer puerto 80
 EXPOSE 80
 
-# Nginx ya está configurado para ejecutarse
+# Asegurar que nginx se ejecute en primer plano
+CMD ["nginx", "-g", "daemon off;"]
