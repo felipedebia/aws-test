@@ -1,0 +1,10 @@
+# Dockerfile ultra simple - solo para verificar que el contenedor funciona
+FROM nginx:alpine
+
+# Crear una página HTML simple
+RUN echo '<html><body><h1>Hello from Rails App!</h1><p>Container is running successfully!</p><p>Time: $(date)</p></body></html>' > /usr/share/nginx/html/index.html
+
+# Exponer puerto 80
+EXPOSE 80
+
+# Nginx ya está configurado para ejecutarse
