@@ -120,9 +120,26 @@ jobs:
           
           # Esperar a que el entorno esté listo
           echo "Esperando a que el entorno esté listo..."
-          aws elasticbeanstalk wait environment-updated \
-            --environment-name Aws-test-env \
-            --region ${{ secrets.AWS_REGION }}
+          while true; do
+            STATUS=$(aws elasticbeanstalk describe-environments \
+              --environment-names Aws-test-env \
+              --region ${{ secrets.AWS_REGION }} \
+              --query 'Environments[0].Status' \
+              --output text)
+            
+            echo "Estado actual del entorno: $STATUS"
+            
+            if [ "$STATUS" = "Ready" ]; then
+              echo "Entorno listo para actualizar"
+              break
+            elif [ "$STATUS" = "Updating" ] || [ "$STATUS" = "Deploying" ]; then
+              echo "Esperando 30 segundos..."
+              sleep 30
+            else
+              echo "Estado inesperado: $STATUS. Esperando 30 segundos..."
+              sleep 30
+            fi
+          done
 
           # Configurar variables de entorno en EB usando solo secrets
           aws elasticbeanstalk update-environment \
